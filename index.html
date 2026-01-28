@@ -281,7 +281,6 @@
 				const popupContent = infoTexts.find(member => {
 					return member.id === this.id;
 				});
-				console.log(popupContent.description);
 				//document.getElementById('popup_text').textContent = popupContent.description;
 				document.getElementById('popup_text_title').innerHTML = popupContent.title;
 				document.getElementById('popup_text_main').innerHTML = popupContent.description;
@@ -302,7 +301,6 @@
 	//***** 動画再生 *****
 	document.body.addEventListener('click', () => {
 	  	console.log('Body clicked! : movie starts');
-	  	document.getElementById('movie').play();
 	  	document.getElementById('movie_main3').play();
 	}, { once: true });
 
