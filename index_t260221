@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+	<meta charset="UTF-8">
+	<title>Bilder's 3D Archive</title>
+	
+	<!-- A-Frame -->
+    <meta name="description" content="Laser input UI • A-Frame">
+	<script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+    <script src="https://unpkg.com/aframe-environment-component@1.5.x/dist/aframe-environment-component.min.js"></script>
+	
+	<!-- Extras -->
+	<script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+	
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100..900&family=Outfit:wght@100..900&family=Zen+Kaku+Gothic+New&display=swap" rel="stylesheet">
+	
+	<style>
+		body { margin: 0; overflow: hidden; font-family: sans-serif;}
+		html { touch-action: manipulation;}
+		
+		/* 移動UI */
+		.ui {
+			position:fixed;
+			bottom: 20px;
+			left: 50%;
+			transform: translateX(-50%);
+			display: flex;
+			gap: 10px;
+			z-index: 10;
+
+			display: grid;
+			grid-template-columns: 100px 100px 100px;
+			grid-template-rows: 50px 50px;
+		}
+
+		.button_move{
+			font-size: 16px;
+			font-weight: bold;
+			opacity: 0.8;
+
+			background-color: #fff;
+			border-radius: 10px;
+			border: solid 2px #4af;
+			box-shadow: 0 5px 3px #0088;
+
+			width: 100px;
+			height: 50px;
+			
+			transition: all 0.2s;
+		}
+
+		.button_move:hover{
+		  	box-shadow: 0 5px 8px #44D8;
+		}
+		.button_move:active{
+		  	box-shadow: 0 3px 2px #44DF;
+		}
+		  
+		#intro {
+			position: fixed;
+			inset: 0;
+			background: rgba(0,0,0,0.7);
+			color: white;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			text-align: center;
+			z-index: 20;
+			font-size: 5vmin;
+			font-family: "Zen Kaku Gothic New", sans-serif;
+			font-weight: bold;
+			font-style: normal;
+		}
+		  
+		#loading {
+			position: fixed;
+			inset: 0;
+			background: rgba(0,0.5,0.8,1);
+			color: white;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			text-align: center;
+			z-index: 30;
+			font-size: 4vmin;
+			font-family: "Zen Kaku Gothic New", sans-serif;
+			font-weight: bold;
+			font-style: normal;
+		}
+
+		#buttonClose{
+			position:absolute;
+			background:#fff;
+			top:20px;
+			left:20px;
+			width: 3vmax;
+			height: 3vmax;
+  			border: none;
+			font-size: 1.5vmax;
+			font-weight: bolder;
+			color: #124;
+			z-index: 999;
+			border-radius: 100%;
+			text-align: center;
+		}
+		#popup_infoArea{
+			position:absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			width: 80%;
+			max-width: 500px;
+			height: 80%;
+			background-color: aliceblue;
+			border: 5px solid #8ad;
+			transition: .1s;
+		}
+		#infoText{
+			height: 70%;
+			width: 100%;
+			max-width: 500px;
+			margin: 0 auto;
+			background-color: #00f8;
+			color: #224;
+			bottom: 0;
+			padding: 10px;
+			margin: 0 auto;
+		}
+		#popup_text {
+			height: 59%;
+			background: #fff;
+			padding: 16px;
+			box-sizing: border-box;
+			text-align: left;
+		}
+		#popup_image {
+			background-color: #fff;
+			height: 40%;
+			width: 100%;
+			overflow: hidden;
+			object-fit: cover;
+		}
+		#popup_image img {
+			width: 100%;
+			height: 100%;
+			max-width: 100%;
+			max-height: 100%;
+			display: block;
+			object-fit: cover;
+		}
+		#popup_text_title{
+			font-weight: bolder;
+			font-size: 120%;
+			margin-top: 5px;
+			margin-bottom: 20px;
+			color:#8ad;
+		}
+		#popup_text_main{
+			font-weight: normal;
+			color: #346;
+		}
+
+		#p_top{
+			grid-row: 1 / 2;
+			grid-column: 2 / 3;
+		}
+		#p_left{
+			grid-row: 2 / 3;
+			grid-column: 1 / 2;
+		}
+		#p_right{
+			grid-row: 2 / 3;
+			grid-column: 3/4;
+		}
+		#p_bottom{
+			grid-row: 2 / 3;
+			grid-column: 2/3;
+		}
+
+	</style>
+</head>
+
+<body>
+
+<!-- 視点操作ボタン -->
+<div class="ui">
+	<button class="button_move" id="p_top" onmousedown="startMove(0, 1)" onmouseup="stopMove()" ontouchstart="startMove(0, 1)" ontouchend="stopMove()">前</button><br>
+	<button class="button_move" id="p_left" onmousedown="startMove(1, 0)" onmouseup="stopMove()" ontouchstart="startMove(0, 1)" ontouchend="stopMove()">左</button>
+	<button class="button_move" id="p_right" onmousedown="startMove(-1, 0)" onmouseup="stopMove()" ontouchstart="startMove(0, 1)" ontouchend="stopMove()">右</button>
+	<button class="button_move" id="p_bottom" onmousedown="startMove(0, -1)" onmouseup="stopMove()" ontouchstart="startMove(0, 1)" ontouchend="stopMove()">後</button>
+</div>
+
+<!-- ポップアップ本体 -->
+<div id="popup" style="
+	position: fixed;
+	inset: 0;
+	background: #2483;
+	color: white;
+	visibility: hidden;
+	opacity: 0;
+	z-index: 40;
+	padding: 5vmin;
+	transition: all 0.3s;
+	backdrop-filter: blur(5px);
+	">
+	<div id="popup_infoArea">
+		<button id="buttonClose" onclick="closeInfo()">×</button>
+		<div id="popup_image">
+			<img id="popup_imgTag" src="" alt="画像">
+		</div>
+		<hr style="opacity: 0.1; padding: 0; margin: 0; height: 0;">
+		<div id="popup_text">
+			<div id="popup_text_title">タイトル</div>
+			<div id="popup_text_main">
+				<p>
+				ポップアップテキストエリア
+				</p>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- 案内表示 -->
+<div id="loading">
+  読み込み中…
+</div>
+<div id="intro">
+  <p>左右にスワイプして向き変更<br>
+  画面下のボタンで移動<br><br>
+  タップして開始</p>
+</div>
+
+<!-- 3D Objects -->>
+<a-scene id="scene" background="color: #5af">
+	<a-assets>
+		<!-- 3D Models -->
+		<a-asset-item id="env" src="assets/BOD_v11_Env.glb"></a-asset-item>
+		<a-asset-item id="dome" src="assets/BOD_Dome_v1.glb"></a-asset-item>
+		<a-asset-item id="bone" src="assets/BOD_Bone_v1.glb"></a-asset-item>
+		<a-asset-item id="screen" src="assets/BOD_v4_Screen.glb"></a-asset-item>
+		<a-asset-item id="dispenser" src="assets/BOD_Dispenser_v1.glb"></a-asset-item>
+		<a-asset-item id="counter" src="assets/BOD_Counter_v1.glb"></a-asset-item>
+		<a-asset-item id="panelA" src="assets/BOD_Panel_A.glb"></a-asset-item>
+		<a-asset-item id="panelB" src="assets/BOD_Panel_B.glb"></a-asset-item>
+		<a-asset-item id="panelC" src="assets/BOD_Panel_C.glb"></a-asset-item>
+		<a-asset-item id="panelD" src="assets/BOD_Panel_D.glb"></a-asset-item>
+		<a-asset-item id="panelE" src="assets/BOD_Panel_E.glb"></a-asset-item>
+		<a-asset-item id="panelF" src="assets/BOD_Panel_F.glb"></a-asset-item>
+
+		<!-- Images for Texture -->
+		<img id="sky" src="kloppenheim_06_puresky_small.jpg"><!-- 背景画像 -->
+		<video id="movie_main" src="assets/VR_Video_MainScreen_Anim_NoAudio.mp4" loop muted playsinline></video><!-- 中央スクリーン用映像 -->
+		<img id="panel1-img" src="assets/panel1.jpg"><!-- パネル画像１ -->
+		<img id="panel2-img" src="assets/panel2.jpg"><!-- パネル画像２ -->
+		<img id="panel3-img" src="assets/panel3.jpg"><!-- パネル画像３ -->
+		<img id="panel4-img" src="assets/panel4.jpg"><!-- パネル画像４ -->
+		<img id="panel5-img" src="assets/panel5.jpg"><!-- パネル画像５ -->
+		<img id="panel6-img" src="assets/panel6.jpg"><!-- パネル画像６ -->
+	</a-assets>
+
+	<a-entity id="mouseCursor" cursor="rayOrigin: mouse" raycaster="objects: .raycastable"></a-entity>
+
+	<!-- 空画像配置 -->
+	<a-sky src="#sky" rotation="0 -90 0" radius="1000"></a-sky>
+
+	<!-- 中央スクリーン配置 -->
+	<a-gltf-model
+		src="#screen"
+		position="0 0 0"
+		rotation="0 -90 0"
+		scale="2 2 2"
+		id="model_mainScreen"
+		material="src: #movie_main"
+		class="raycastable" 
+		detection>
+	</a-gltf-model>
+	
+	<!-- その他モデル配置 -->
+	<a-gltf-model
+		src="#env"
+		id="model_env"
+		position="0 0 0"
+		rotation="0 -90 0"
+		scale="2 2 2">
+	</a-gltf-model>
+	
+	<!-- ドームモデル配置 -->
+	<a-gltf-model
+		src="#dome"
+		id="model_dome"
+		position="0 0 0"
+		rotation="0 -90 0"
+		scale="2 2 2"
+		shadow="cast: false">
+	</a-gltf-model>
+	
+	<!-- 骨組みモデル配置 -->
+	<a-gltf-model
+		src="#bone"
+		id="model_bone"
+		position="0 0 0"
+		rotation="0 -90 0"
+		scale="2 2 2">
+	</a-gltf-model>
+	
+	<!-- パネルモデルx6 配置 -->
+	<a-gltf-model
+		src="#panelA"
+		id="model_panelA"
+		rotation="0 -90 0"
+		scale="2 2 2"
+		material="shader: flat; color:#ff0"
+		class="panelsCls raycastable" 
+		detection
+		animation-mixer>
+	</a-gltf-model>
+	<a-gltf-model
+		src="#panelB"
+		id="model_panelB"
+		rotation="0 -90 0"
+		scale="2 2 2"
+		material="shader: flat; color:#ff0"
+		class="panelsCls raycastable" 
+		detection
+		animation-mixer>
+	</a-gltf-model>
+	<a-gltf-model
+		src="#panelC"
+		id="model_panelC"
+		rotation="0 -90 0"
+		scale="2 2 2"
+		material="shader: flat; color:#ff0"
+		class="panelsCls raycastable" 
+		detection
+		animation-mixer>
+	</a-gltf-model>
+	<a-gltf-model
+		src="#panelD"
+		id="model_panelD"
+		rotation="0 -90 0"
+		scale="2 2 2"
+		material="shader: flat; color:#ff0"
+		class="panelsCls raycastable" 
+		detection
+		animation-mixer>
+	</a-gltf-model>
+	<a-gltf-model
+		src="#panelE"
+		id="model_panelE"
+		rotation="0 -90 0"
+		scale="2 2 2"
+		material="shader: flat; color:#ff0"
+		class="panelsCls raycastable" 
+		detection
+		animation-mixer>
+	</a-gltf-model>
+	<a-gltf-model
+		src="#panelF"
+		id="model_panelF"
+		rotation="0 -90 0"
+		scale="2 2 2"
+		material="shader: flat; color:#ff0"
+		class="panelsCls raycastable" 
+		detection
+		animation-mixer>
+	</a-gltf-model>
+
+	<!-- ディスペンサーモデル配置 -->
+	<a-gltf-model
+		src="#dispenser"
+		position="-0.7 0 0.7"
+		rotation="0 45 0"
+		scale="0.08 0.08 0.08"
+		class="raycastable" 
+		id="model_dispenser"
+		detection>
+	</a-gltf-model>
+	
+	<!-- カウンターモデル配置 -->
+	<a-gltf-model
+		src="#counter"
+		position="0 0 0"
+		rotation="0 -90 0"
+		scale="2 2 2"
+		class="raycastable" 
+		id="model_counter"
+		detection>
+	</a-gltf-model>
+
+	<!-- ライティング -->
+	<a-entity light="type: directional; color: #fff0e0; intensity: 5.0;" position="0 -1 0"></a-entity>
+	<a-entity light="type: spot; color: #fff0e0; intensity:5.0; target: #model_dispenser; angle: 5; penumbra:0.4" position="0 2 0"></a-entity>
+	<a-entity light="type: spot; color: #fff0e0; intensity:12.0; castShadow:true; target: #model_env; angle: 59; penumbra: 0.5" position="0 2 0"></a-entity>
+	<a-light type="ambient" color="#fff" intensity="0.5"></a-light>
+
+	<!-- カメラ -->
+	<a-entity id="rig"
+		position="0 -1.3 0.5"
+		relative-move="speed: 0.01; radius: 1.1">
+			<a-camera
+				look-controls
+				raycaster="objects: .clickable"
+				cursor="rayOrigin: entity"
+				near="0.05">
+			</a-camera>
+	</a-entity>
+
+</a-scene>
+
+<script>
+
+	function closeInfo(){
+		const infoPage = document.getElementById('popup');
+		infoPage.style.visibility = 'hidden';
+		infoPage.style.opacity = 0;
+		infoPage.style.transition='all 0.3s';
+	}
+
+	AFRAME.registerComponent('detection', {
+		init:function(){
+			this.el.addEventListener('click', function(evt){
+				console.log('Clicked - Obj ID: ', this.id);//[this.id] or [evt.detail.intersection.object.el.id]
+				const infoPage = document.getElementById('popup');
+				/*infoPage.style.display = 'block';*/
+				infoPage.style.visibility = 'visible';
+				infoPage.style.opacity = 1;
+				infoPage.style.transition='all 0.3s';
+				
+				const popupContent = infoTexts.find(member => {
+					return member.id === this.id;
+				});
+				console.log(popupContent.description);
+				//document.getElementById('popup_text').textContent = popupContent.description;
+				document.getElementById('popup_text_title').innerHTML = popupContent.title;
+				document.getElementById('popup_text_main').innerHTML = popupContent.description;
+				document.getElementById('popup_imgTag').src = popupContent.image;
+			});
+		}
+	});
+	
+	const scene = document.getElementById('scene');
+	
+	//***** 案内表示 *****
+	const intro = document.getElementById('intro');
+	intro.addEventListener('click', () => {
+	  	intro.style.display = 'none';
+	  	document.getElementById('movie_main').play();
+	});
+		
+	//***** 動画再生 *****
+	document.body.addEventListener('click', () => {
+		console.log("movie playing");
+	  	document.getElementById('movie_main').play();
+	}, { once: true });
+
+	
+	//***** 読み込み完了処理（読み込み表示終了） *****
+	scene.addEventListener('loaded', () => {
+		const loading = document.getElementById('loading');
+		loading.style.display = 'none';
+	});
+	
+	//***** 動画テクスチャ貼り付け(中央スクリーン) *****
+	const screenEl = document.querySelector('a-gltf-model[src="#screen"]');
+	screenEl.addEventListener('model-loaded', () => {
+		const root = screenEl.getObject3D('mesh');
+		if (!root) return;
+		const video = document.getElementById('movie_main');
+		
+		const videoTexture = new AFRAME.THREE.VideoTexture(video);
+		videoTexture.flipY = false;
+		videoTexture.colorSpace = AFRAME.THREE.SRGBColorSpace;
+		videoTexture.needsUpdate = true;
+		
+		root.traverse(obj => {
+			if (obj.type === 'Mesh' && obj.name === 'Screen') {
+				obj.material.color.setRGB(1, 1, 1);
+				obj.material.map = videoTexture;
+				obj.material.needsUpdate = true;
+			}
+		});
+	});
+
+	//***** 画像テクスチャ貼り付け(パネル６枚) *****
+	const panelsEl = document.querySelectorAll('.panelsCls');
+    panelsEl.forEach(obj =>{
+        obj.addEventListener('model-loaded', () => {
+			modelMesh = obj.getObject3D('mesh');
+			modelMesh.traverse(elm => {
+				if (elm.type === 'Mesh') {
+					const img = document.getElementById(
+						elm.name.toLowerCase() + '-img'
+					);
+					const texturePanel = new AFRAME.THREE.VideoTexture(img);
+					texturePanel.flipY = false;
+					texturePanel.colorSpace = AFRAME.THREE.SRGBColorSpace;
+					texturePanel.needsUpdate = true;
+					elm.material.color.setRGB(1, 1, 1);
+					elm.material.map = texturePanel;
+					elm.material.needsUpdate = true;
+				}
+			});
+
+        });
+    });
+
+
+
+	//***** 視点制御 *****
+	AFRAME.registerComponent('relative-move', {
+	  schema: {
+	    speed: { default: 0.001 },
+	    radius: { default: 1.0 }
+	  },
+	
+	  init() {
+	    this.moveVec = { x: 0, z: 0 };
+	    this.moving = false;
+	
+	    window.startMove = (x, z) => {
+	      this.moveVec.x = x;
+	      this.moveVec.z = z;
+	      this.moving = true;
+	    };
+	
+	    window.stopMove = () => {
+	      this.moving = false;
+	    };
+	  },
+	
+	  tick() {
+	    if (!this.moving) return;
+	    const rig = this.el;
+	    const camera = rig.querySelector('a-camera');
+	    const dir = new THREE.Vector3();
+	    camera.object3D.getWorldDirection(dir);
+	    dir.y = 0;
+	    dir.normalize();
+	    const right = new THREE.Vector3()
+	      .crossVectors(dir, new THREE.Vector3(0, 1, 0))
+	      .normalize();
+	    const pos = rig.object3D.position;
+	    pos.addScaledVector(dir, -this.moveVec.z * this.data.speed);
+	    pos.addScaledVector(right, this.moveVec.x * this.data.speed);
+	    // 円形制限
+		const d = Math.sqrt(pos.x * pos.x + pos.z * pos.z);
+	    if (d > this.data.radius) {
+		  const ratio = this.data.radius / d;
+		  pos.x *= ratio;
+		  pos.z *= ratio;
+		  pos.y = -1.3;
+		}
+	  }
+	});
+		
+	//***** 説明文リスト *****
+    const infoTexts = [
+      {
+		//メインスクリーン
+		id: 'model_mainScreen',
+        title: '基調ループ映像',
+		thumbnail: 'assets/wallpaper_202305_1.jpg',
+		image: 'assets/IMG_MainScreen.jpg',
+        description: '対馬ウィーク期間中、Cドームでは金沢美術工芸大学と立教大学の学生が制作した映像を上映しました。<br>計４つの映像のうち、ここではSDGsや海洋問題について考え解決のためのアイデアを共有するムービーをご覧いただけます。'
+      },
+      {
+		//パネル１
+		id: 'model_panelA',
+        title: 'タイトル1',
+		image: 'assets/panel1.jpg',
+        description: 'Aのコンテンツ　あいうえおかきくけこさしすせそたちつてと。'
+      },
+      {
+		//パネル２
+		id: 'model_panelB',
+        title: 'タイトル2',
+		image: 'assets/panel2.jpg',
+        description: 'Bのコンテンツ　あいうえおかきくけこさしすせそたちつてと。'
+      },
+      {
+		//パネル３
+		id: 'model_panelC',
+        title: 'タイトル3',
+		image: 'assets/panel3.jpg',
+        description: 'Cのコンテンツ　あいうえおかきくけこさしすせそたちつてと。'
+      },
+      {
+		//パネル４
+		id: 'model_panelD',
+        title: 'タイトル4',
+		image: 'assets/panel3.jpg',
+        description: 'Dのコンテンツ　あいうえおかきくけこさしすせそたちつてと。'
+      },
+      {
+		//パネル５
+		id: 'model_panelE',
+        title: 'タイトル5',
+		image: 'assets/panel3.jpg',
+        description: 'Eのコンテンツ　あいうえおかきくけこさしすせそたちつてと。'
+      },
+      {
+		//パネル６
+		id: 'model_panelF',
+        title: 'タイトル6',
+		image: 'assets/panel3.jpg',
+        description: 'Fのコンテンツ　あいうえおかきくけこさしすせそたちつてと。'
+      },
+      {
+		//ディスペンサー
+		id: 'model_dispenser',
+        title: 'SARAYAのディスペンサー',
+		image: 'https://www.saraya.com/themes/expo2025@saraya/images/dispenser_main.png',
+        description: '日本初の薬用石けん液と専用容器を開発し、手洗い習慣を広げることから事業をスタートしたサラヤ。<br>未来の消毒のかたちを考え、あたらしい自動手指消毒ディスペンサーをつくりました。<br>(公式HPより)<br><br><a href="https://www.saraya.com/expo2025/dispenser.html">ディスペンサーについてもっと知る</a>'
+      },
+      {
+		//カウンター
+		id: 'model_counter',
+        title: '海と山の超純水',
+		image: 'https://zeri.jp/expo2025/wpnew/wp-content/uploads/2025/03/cup.jpg',
+        description: 'カフェスペースでは、料理研究家・土井善晴によるスープを販売。「海と山の超純水」とは、人の手が加わる以前の自然の恵みを、一杯のカップに表現したものです。混じり気のない海の塩と山の水を合わせた塩水が、人々に清らかな感性を呼び起こします。<br>(公式HPより)'
+      }
+];
+	
+</script>
+
+</body>
+</html>
