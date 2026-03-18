@@ -492,6 +492,7 @@
 			modelMesh = obj.getObject3D('mesh');
 			modelMesh.traverse(elm => {
 				if (elm.type === 'Mesh') {
+					console.log(elm.name, elm.id);
 					const img = document.getElementById(
 						elm.name.toLowerCase() + '-img'
 					);
